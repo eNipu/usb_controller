@@ -1,4 +1,5 @@
 use rusb::Device;
+use std::io;
 use std::time::Duration;
 extern crate udev;
 
@@ -14,33 +15,29 @@ fn main() {
             eprintln!("Failed to get device list: {}", e);
         }
     }
-    monitor_devices();
+    // monitor_devices().unwrap();
 }
 
-// fn monitor_devices() {
-//     let mut enumerator = udev::Enumerator::new().unwrap();
-//     enumerator.match_subsystem("usb").unwrap();
-//     let monitor = udev::Monitor::new().unwrap();
-//     monitor
-//         .match_subsystem_devtype("usb", "usb_device")
-//         .unwrap();
-//     let mut monitor_socket = monitor.listen().unwrap();
+fn monitor_devices() -> io::Result<()> {
+    let mut enumerator = udev::Enumerator::new()?;
 
-//     println!("Listening for events...");
-//     loop {
-//         match monitor_socket.receive_event() {
-//             Ok(event) => {
-//                 println!("EVENT:");
-//                 println!("udev: {:?}", event.udev());
-//                 println!("sequence_number: {:?}", event.sequence_number());
-//                 println!("type: {:?}", event.event_type());
-//                 println!("path: {:?}", event.syspath());
-//                 println!("device: {:?}", event.device().unwrap().sysname());
-//             }
-//             Err(e) => println!("{:?}", e),
-//         }
-//     }
-// }
+    for device in enumerator.scan_devices()? {
+        println!();
+        println!("{:#?}", device);
+
+        println!("  [properties]");
+        for property in device.properties() {
+            println!("    - {:?} {:?}", property.name(), property.value());
+        }
+
+        println!("  [attributes]");
+        for attribute in device.attributes() {
+            println!("    - {:?} {:?}", attribute.name(), attribute.value());
+        }
+    }
+
+    Ok(())
+}
 
 fn print_device(device: &Device<rusb::GlobalContext>) {
     match device.device_descriptor() {
